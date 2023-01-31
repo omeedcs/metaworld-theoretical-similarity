@@ -2,7 +2,7 @@
 
 ### Summary:
 
-Evaluating the theoretical similarity between multiple manipulation tasks with the ultimate goal of improving multi-task learning and/or transfer learning to new tasks. Advisors for this work are Dr.Roberto Martin-Martin and visiting scholar Fernando Fernández Rebollo.
+Evaluating the theoretical similarity between multiple manipulation tasks with the ultimate goal of improving multi-task learning and/or transfer learning to new tasks. Advisors for this work are Dr.Roberto Martin-Martin and visiting scholar Dr. Fernando Fernández Rebollo.
 
 ### Categories of Similarity Metrics:
 
