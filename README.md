@@ -1,4 +1,4 @@
-# metaworld-theoretical-similarity
+# Meta-World Theoretical Similarity
 
 ### Summary:
 
