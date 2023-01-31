@@ -1,5 +1,6 @@
-# Installing Meta-World on M1
+# Installing Stuff on the M1
 
+## Meta-World
 Following [this guide](https://github.com/openai/mujoco-py/issues/662#issuecomment-996081734) got us most of the way there, although there was one last issue that needed to be resolved:
 
 ```
@@ -29,4 +30,15 @@ cd ~/.mujoco/mujoco210/bin
 ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework
 ```
 
-Try running the `test_mw_installation.py`. There might be some warnings about casting floats, but it shouldn't error. Presumably it's working.
+Try running the `test-mw-installation.py`. There might be some warnings about casting floats, but it shouldn't error. Presumably it's working.
+
+## Stable Baselines
+Following [their instructions](https://github.com/DLR-RM/stable-baselines3) worked really well.
+
+### PyTorch
+Install Pytorch using the command on the PyTorch website. There shouldn't be any issues.
+
+### PyGLet
+OpenAI Gym needs PyGLet to render the cartpole task. Use `pip install pyglet==1.5.27` to get the right version.
+
+Try running `stable-baselines-installation.py` to check if it worked.
