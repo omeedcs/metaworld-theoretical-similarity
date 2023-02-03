@@ -10,7 +10,7 @@ env = ml1.train_classes['pick-place-v2']()
 task = random.choice(ml1.train_tasks)
 env.set_task(task)
 
-model = PPO("MlpPolicy", env, verbose=1)
+model = PPO("MlpPolicy", env, verbose=1, n_steps=500, batch_size=50)
 # we need to handle episode termination manually since SB3 doesn't issues #284 and #633
 # model.learn(total_timesteps=1000)
 
@@ -31,15 +31,13 @@ class MWTerminationCallback(BaseCallback):
         pass
 
     def _on_step(self) -> bool:
-        """
-        Returns false if we've reached the the maximimum number of steps for this MetaWorld environment
-        """
-        self.step_count += 1
-        if self.step_count > 500:
-            return False
         return True
 
     def _on_rollout_end(self):
+        """
+        Manually reset environment since MW won't do it itself
+        """
+        self.model.env.reset()
         pass
 
     def _on_training_end(self):
@@ -51,12 +49,11 @@ iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback=MWTerminationCallback())
 while model.num_timesteps < total_timesteps:
     continue_training = model.collect_rollouts(model.env, callback, model.rollout_buffer, n_rollout_steps=model.n_steps)
-
-    if not continue_training:
-        break
-
+    
     iteration += 1
     model.train()
+
+print(f"Completed {iteration} iterations")
 
 vec_env = model.get_env()
 obs = vec_env.reset()
