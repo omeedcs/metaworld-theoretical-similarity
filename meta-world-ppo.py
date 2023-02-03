@@ -43,27 +43,36 @@ class MWTerminationCallback(BaseCallback):
     def _on_training_end(self):
         pass
 
+def evaluate_model(model):
+    vec_env = model.get_env()
+    obs = vec_env.reset()
+    N = 500
+    rewards = 0
+    for i in range(N):
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = vec_env.step(action)
+        rewards += reward
+        # seems to render to an offscreen window which we can't see
+        # correctly outputs rgb images we can construct into a video, though
+        vec_env.render()
+
+    env.close()
+    return rewards
+
 # manual learning
-total_timesteps = 10_000
+total_timesteps = 1_000_000
 iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback=MWTerminationCallback())
 while model.num_timesteps < total_timesteps:
+    model.get_env().reset()
     continue_training = model.collect_rollouts(model.env, callback, model.rollout_buffer, n_rollout_steps=model.n_steps)
-    
+
     iteration += 1
+    
+    # periodically evaluate
+    if iteration % 10 == 0:
+        print(f"Iteration {iteration}: {evaluate_model(model)}")
+
     model.train()
 
 print(f"Completed {iteration} iterations")
-
-vec_env = model.get_env()
-obs = vec_env.reset()
-for i in range(500):
-    action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, info = vec_env.step(action)
-    # seems to render to an offscreen window which we can't see
-    # correctly outputs rgb images we can construct into a video, though
-    vec_env.render()
-    if done:
-      obs = env.reset()
-
-env.close()
