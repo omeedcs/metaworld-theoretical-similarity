@@ -1,13 +1,20 @@
 from typing import Callable
 import random
+import os
 
+import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 import metaworld
 import imageio
+from pygifsicle import optimize
 import numpy as np
 
+
 task_name = 'pick-place-v2'
+video_dir = 'training_mp4s' 
+
+os.system(f"rm -r {video_dir}")
 
 ml1 = metaworld.ML1(task_name)
 
@@ -17,7 +24,7 @@ env.set_task(task)
 
 params = {
     # "learning_rate": 5e-4,
-    "gamma": 0.99,
+    "ent_coef": 5e-4
 }
 
 model = PPO("MlpPolicy", env, verbose=1, **params)
@@ -60,7 +67,7 @@ class MWTerminationCallback(BaseCallback):
     def _on_training_end(self):
         pass
 
-def evaluate_model(model, T=10):
+def evaluate_model(model, T=2):
     """
     Runs the model over T total evaluations and gets the average
     total return
@@ -85,6 +92,7 @@ def render_model(model, file_name=task_name):
     Runs a simulation of the task and renders a view of it to a gif
     in the current working directory.
     """
+    print("Creating render")
     images = []
     vec_env = model.get_env()
     img = vec_env.render(mode="rgb_array")
@@ -98,21 +106,33 @@ def render_model(model, file_name=task_name):
         # correctly outputs rgb images we can construct into a video, though
         img = vec_env.render(mode="rgb_array")
 
-    imageio.mimsave(f"{file_name}.gif", [np.array(img) for i, img in enumerate(images) if i % 5 == 0])
+    if not os.path.isdir(f"{video_dir}"):
+        os.mkdir(video_dir)
+    path = os.path.join(video_dir, f"{file_name}")
+    imageio.mimsave(path+".gif", [np.array(img) for i, img in enumerate(images) if i % 5 == 0])
+    os.system(f'ffmpeg -i {path}.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {path}.mp4')
+    os.system(f'rm {path}.gif')
 
+x_time_steps = []
+y_total_reward = []
 
 # manual learning
-total_timesteps = 1_000_000
+total_timesteps = 5_000_000
 iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback=MWTerminationCallback())
 while model.num_timesteps < total_timesteps:
     # periodically evaluate
-    if iteration % 10 == 0:
-        print(f"Iteration {iteration} ({model.num_timesteps} timesteps): {evaluate_model(model)}")
+    if iteration % 25 == 0:
+        total_reward = evaluate_model(model)[0]
+        x_time_steps.append(model.num_timesteps)
+        y_total_reward.append(total_reward)
+        print(f"Iteration {iteration} ({model.num_timesteps} timesteps): {total_reward}")
+        render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward))
 
-    if iteration % 100 == 0:
-        print("Creating render")
-        render_model(model)
+        plt.plot(x_time_steps, y_total_reward)
+        plt.xlabel("Timesteps Trained")
+        plt.ylabel("Total Reward per Episode")
+        plt.savefig("training_curve.png")
 
     model.get_env().reset()
     continue_training = model.collect_rollouts(model.env, callback, model.rollout_buffer, n_rollout_steps=model.n_steps)
@@ -122,9 +142,11 @@ while model.num_timesteps < total_timesteps:
     model.train()
 
 
-print(f"Completed {iteration} iterations")
-
-print(evaluate_model(model))
-render_model(model)
+x_time_steps.append(model.num_timesteps)
+total_reward = evaluate_model(model)[0]
+y_total_reward.append(total_reward)
+print(f"Iteration {iteration} ({model.num_timesteps} timesteps): {total_reward}")
+render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward))
 
 env.close()
+
