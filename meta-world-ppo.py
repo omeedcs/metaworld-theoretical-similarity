@@ -7,7 +7,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 import metaworld
 import imageio
-from pygifsicle import optimize
 import numpy as np
 
 
