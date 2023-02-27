@@ -27,7 +27,7 @@ import sys
 #     project="robin-research-theoretical-similarity",
 # )
 
-task_name = 'pick-place-v2'
+task_name = sys.argv[1]
 # task_name = 'pick-and-place-v1'
 curve_png = f'{task_name}/training_curve.png'
 video_dir = f'{task_name}/training_mp4s' 
