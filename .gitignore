@@ -1,4 +1,6 @@
-.DS_Store/
+.DS_Store
+__pycache__/
+.ipynb_checkpoints
 training_curve.png
 training_mp4s/
 *.zip
