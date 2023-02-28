@@ -21,6 +21,7 @@ from stable_baselines3.common.type_aliases import TrainFreq, TrainFrequencyUnit
 from enum import Enum
 from TimeLimit import TimeLimit
 import sys
+import time
 
 # # link to wandb.
 # wandb.init(
@@ -48,13 +49,13 @@ policy_kwargs = dict(activation_fn= th.nn.ReLU,
 params = {
     "batch_size": 500,
     'learning_rate': 3e-4,
-    # exploration strategy will remain as default.
     "use_sde": False,
-    # 'replay_buffer_kwargs': replay_kwargs,
     'policy_kwargs': policy_kwargs,
     'tau': 5e-3,
     'buffer_size': 1000000,
+    # has massive impact on training speed.
     'train_freq': (100, 'step'),
+    'device': 'cuda',
 }
 
 # log_std_init = math.exp(-20.0)? 
@@ -138,7 +139,7 @@ def render_model(model, file_name=task_name):
     print("Creating render")
     images = []
     vec_env = model.get_env()
-    img = vec_env.render(mode="rgb_array")
+    # img = vec_env.render(mode="rgb_array")
     obs = vec_env.reset()
     N = 500
     for i in range(N):
@@ -148,7 +149,7 @@ def render_model(model, file_name=task_name):
 
         # seems to render to an offscreen window which we can't see
         # correctly outputs rgb images we can construct into a video, though
-        img = vec_env.render(mode = "rgb_array")
+        # img = vec_env.render(mode = "rgb_array")
 
     if not os.path.isdir(f"{video_dir}"):
         os.makedirs(video_dir, exist_ok=True)
@@ -167,9 +168,14 @@ total_timesteps = 10_000_000
 iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback = MWTerminationCallback())
 
+
 while model.num_timesteps < total_timesteps:
+
+    start_time = time.time()
     # periodically evaluate
     if iteration % 100 == 0:
+        end_time = time.time()
+        print(f"Time taken for 100 iterations {iteration}: {end_time - start_time}")
         total_reward, success_rate = evaluate_model(model)
         x_time_steps.append(model.num_timesteps)
         y_total_reward.append(total_reward[0])
@@ -184,7 +190,7 @@ while model.num_timesteps < total_timesteps:
         #     "Timesteps Trained": x_time_steps[-1], 
         #     "Total Reward per Episode": y_total_reward[-1]
         #         })
-
+        #     
     model.get_env().reset()
     continue_training = model.collect_rollouts(model.env, callback, model.train_freq, replay_buffer = model.replay_buffer)
 
