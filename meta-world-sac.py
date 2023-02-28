@@ -198,7 +198,8 @@ while model.num_timesteps < total_timesteps:
     if model.num_timesteps > model.learning_starts:
         model.train(gradient_steps = 250)
         if iteration % 100 == 0:
-            render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
+            # render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
+            pass
 
     iteration += 1
 
