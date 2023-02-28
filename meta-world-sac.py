@@ -55,7 +55,7 @@ params = {
     'buffer_size': 1000000,
     # has massive impact on training speed.
     'train_freq': (100, 'step'),
-    'device': 'cuda',
+    'device': 'cpu',
 }
 
 # log_std_init = math.exp(-20.0)? 
@@ -168,14 +168,10 @@ total_timesteps = 10_000_000
 iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback = MWTerminationCallback())
 
-
 while model.num_timesteps < total_timesteps:
-
     start_time = time.time()
     # periodically evaluate
     if iteration % 100 == 0:
-        end_time = time.time()
-        print(f"Time taken for 100 iterations {iteration}: {end_time - start_time}")
         total_reward, success_rate = evaluate_model(model)
         x_time_steps.append(model.num_timesteps)
         y_total_reward.append(total_reward[0])
@@ -201,6 +197,7 @@ while model.num_timesteps < total_timesteps:
             # render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
             pass
 
+    print(f"Iteration {iteration} taken {time.time() - start_time} seconds")
     iteration += 1
 
 
