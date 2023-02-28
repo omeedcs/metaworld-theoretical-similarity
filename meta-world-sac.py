@@ -1,6 +1,7 @@
-# REFERENCE LINK: 
+# REFERENCE LINKS: 
 # https://stable-baselines3.readthedocs.io/en/master/modules/sac.html
 # https://www.reddit.com/r/reinforcementlearning/comments/wztujn/agent_trains_great_with_ppo_but_terrible_with_sac/
+# we need to handle episode termination manually since SB3 doesn't issues #284 and #633
 
 
 # import wandb
@@ -32,6 +33,7 @@ task_name = sys.argv[1]
 # task_name = 'pick-and-place-v1'
 curve_png = f'{task_name}/training_curve.png'
 video_dir = f'{task_name}/training_mp4s' 
+model_dir = f'{task_name}/models'
 
 os.system(f"rm -r {task_name}")
 os.mkdir(task_name)
@@ -58,11 +60,7 @@ params = {
     'device': 'cpu',
 }
 
-# log_std_init = math.exp(-20.0)? 
-
 model = SAC("MlpPolicy", env, verbose = 1, **params)
-# we need to handle episode termination manually since SB3 doesn't issues #284 and #633
-# model.learn(total_timesteps=1000)
 
 class MWTerminationCallback(BaseCallback):
     """
@@ -117,16 +115,9 @@ def evaluate_model(model, T=2):
         for i in range(N):
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = vec_env.step(action)
-            # print the current reward.
-
-            # obtain success from info
             success = info[0]
             if success['success'] > 0: any_success = True
-
             rewards += reward
-            # seems to render to an offscreen window which we can't see
-            # correctly outputs rgb images we can construct into a video, though
-            # vec_env.render()
         if any_success: successes += 1.0
 
     return rewards / T, successes / T
@@ -139,17 +130,14 @@ def render_model(model, file_name=task_name):
     print("Creating render")
     images = []
     vec_env = model.get_env()
-    # img = vec_env.render(mode="rgb_array")
+    img = vec_env.render(mode="rgb_array")
     obs = vec_env.reset()
     N = 500
     for i in range(N):
         images.append(img)
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = vec_env.step(action)
-
-        # seems to render to an offscreen window which we can't see
-        # correctly outputs rgb images we can construct into a video, though
-        # img = vec_env.render(mode = "rgb_array")
+        img = vec_env.render(mode = "rgb_array")
 
     if not os.path.isdir(f"{video_dir}"):
         os.makedirs(video_dir, exist_ok=True)
@@ -162,9 +150,7 @@ x_time_steps = []
 y_total_reward = []
 y_success_rate = []
 
-# manual learning
-# at what point do we overfit?
-total_timesteps = 10_000_000
+total_timesteps = 3_000_000
 iteration = 0
 total_timesteps, callback = model._setup_learn(total_timesteps, callback = MWTerminationCallback())
 
@@ -173,6 +159,7 @@ while model.num_timesteps < total_timesteps:
     # periodically evaluate
     if iteration % 100 == 0:
         total_reward, success_rate = evaluate_model(model)
+        model.save(f"{model_dir}/{task_name}_{iteration}.pkl")
         x_time_steps.append(model.num_timesteps)
         y_total_reward.append(total_reward[0])
         y_success_rate.append(rgb2hex((1.0 - success_rate, success_rate, 0.0)))
@@ -194,8 +181,7 @@ while model.num_timesteps < total_timesteps:
     if model.num_timesteps > model.learning_starts:
         model.train(gradient_steps = 250)
         if iteration % 100 == 0:
-            # render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
-            pass
+            render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
 
     print(f"Iteration {iteration} taken {time.time() - start_time} seconds")
     iteration += 1
