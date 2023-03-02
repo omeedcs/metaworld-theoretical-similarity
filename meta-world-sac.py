@@ -56,7 +56,7 @@ params = {
     'tau': 5e-3,
     'buffer_size': 1000000,
     # has massive impact on training speed.
-    'train_freq': (100, 'step'),
+    'train_freq': (40, 'step'),
     'device': 'cpu',
 }
 
@@ -82,7 +82,7 @@ class MWTerminationCallback(BaseCallback):
         # TODO: Check this for safety such that returns are not
         # estimated across multiple episodes via discount factor
         # self.path_length += 1
-        #
+        
         # if self.path_length >= 500:
         #     self.model.env.reset()
         #     self.path_length = 0
@@ -179,7 +179,7 @@ while model.num_timesteps < total_timesteps:
 
 
     if model.num_timesteps > model.learning_starts:
-        model.train(gradient_steps = 250)
+        model.train(gradient_steps = 500)
         if iteration % 100 == 0:
             render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward[0]))
 
