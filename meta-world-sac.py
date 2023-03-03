@@ -37,6 +37,7 @@ model_dir = f'{task_name}/models'
 
 os.system(f"rm -r {task_name}")
 os.mkdir(task_name)
+os.mkdir(model_dir)
 
 ml1 = metaworld.ML1(task_name)
 
@@ -98,8 +99,6 @@ class MWTerminationCallback(BaseCallback):
     def _on_training_end(self):
         pass
 
-
-
 def evaluate_model(model, T=2):
     """
     Runs the model over T total evaluations and gets the average
@@ -121,6 +120,34 @@ def evaluate_model(model, T=2):
         if any_success: successes += 1.0
 
     return rewards / T, successes / T
+
+def verified_evaluation(model, T=2):
+    """
+    Evaluates, saves parameters, and revaluates to verify that the model
+    was saved correctly
+    """
+    import pickle
+
+    num_timesteps = model.num_timesteps
+    reward, successes = evaluate_model(model, T=T)
+
+    # try saving and reloading the model for verification
+    to_save = model.get_parameters()
+    outfile_name = f"{task_name}/models/{task_name}-s{num_timesteps}-r{reward.item()}.pkl"
+    outfile = open(outfile_name, "wb")
+    pickle.dump(to_save, outfile)
+    outfile.close()
+
+    infile = open(outfile_name, "rb")
+    loaded_params = pickle.load(infile)
+    infile.close()
+
+    model.set_parameters(loaded_params)
+
+    loaded_reward, loaded_successes = evaluate_model(model, T=T)
+    assert(reward == loaded_reward)
+
+    return loaded_reward, loaded_successes
 
 def render_model(model, file_name=task_name):
     """
@@ -158,8 +185,7 @@ while model.num_timesteps < total_timesteps:
     start_time = time.time()
     # periodically evaluate
     if iteration % 100 == 0:
-        total_reward, success_rate = evaluate_model(model)
-        model.save(f"{model_dir}/{task_name}_{iteration}.pkl")
+        total_reward, success_rate = verified_evaluation(model)
         x_time_steps.append(model.num_timesteps)
         y_total_reward.append(total_reward[0])
         y_success_rate.append(rgb2hex((1.0 - success_rate, success_rate, 0.0)))
