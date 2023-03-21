@@ -14,6 +14,7 @@ from matplotlib.colors import rgb2hex
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import BaseCallback
 import metaworld
+from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
 from collections import namedtuple
 import imageio
 import numpy as np
@@ -35,16 +36,20 @@ curve_png = f'{task_name}/training_curve.png'
 video_dir = f'{task_name}/training_mp4s' 
 model_dir = f'{task_name}/models'
 
+env_constructor = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f'{task_name}-goal-observable']
+
 os.system(f"rm -r {task_name}")
 os.mkdir(task_name)
 os.mkdir(model_dir)
 
-ml1 = metaworld.ML1(task_name)
+def sample_env(env_constructor):
+    while True:
+        new_env = env_constructor(seed=random.randint(0, 10000))
+        new_env.reset()
+        yield TimeLimit(new_env, 500)
 
-env = ml1.train_classes[task_name]()
-task = ml1.train_tasks[0]
-env.set_task(task)
-env = TimeLimit(env, 500)
+env_sampler = sample_env(env_constructor)
+env = next(env_sampler)
 
 policy_kwargs = dict(activation_fn= th.nn.ReLU,
                      net_arch=[256, 256])
@@ -55,13 +60,16 @@ params = {
     "use_sde": False,
     'policy_kwargs': policy_kwargs,
     'tau': 5e-3,
-    'buffer_size': 1000000,
+    'buffer_size': 100000,
     # has massive impact on training speed.
-    'train_freq': (40, 'step'),
+    'train_freq': (500, 'step'),
     'device': 'cpu',
 }
 
 model = SAC("MlpPolicy", env, verbose = 1, **params)
+new_env = next(env_sampler)
+# TODO: why does this work? force_reset was supposed to *avoid* errors
+model.set_env(new_env, force_reset=False)
 
 class MWTerminationCallback(BaseCallback):
     """
@@ -80,20 +88,15 @@ class MWTerminationCallback(BaseCallback):
         pass
 
     def _on_step(self) -> bool:
-        # TODO: Check this for safety such that returns are not
-        # estimated across multiple episodes via discount factor
-        # self.path_length += 1
-        
-        # if self.path_length >= 500:
-        #     self.model.env.reset()
-        #     self.path_length = 0
         return True
 
     def _on_rollout_end(self):
         """
-        Manually reset environment since MW won't do it itself
+        Reset the environment and sample new env variation
         """
-        self.model.env.reset()
+        global env_sampler
+        new_env = next(env_sampler)
+        self.model.set_env(new_env, force_reset=False)
         pass
 
     def _on_training_end(self):
@@ -219,4 +222,5 @@ y_total_reward.append(total_reward)
 print(f"Iteration {iteration} ({model.num_timesteps} timesteps): {total_reward}")
 render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward))
 
-env.close()
+wrapped_env.close()
+
