@@ -25,10 +25,10 @@ from TimeLimit import TimeLimit
 import sys
 import time
 
-# # link to wandb.
-# wandb.init(
-#     project="robin-research-theoretical-similarity",
-# )
+# switching from wandb to tensorboard
+import torch
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 task_name = sys.argv[1]
 # task_name = 'pick-and-place-v1'
@@ -96,7 +96,7 @@ class MWTerminationCallback(BaseCallback):
         """
         global env_sampler
         new_env = next(env_sampler)
-        self.model.set_env(new_env, force_reset=False)
+        self.model.set_env(new_env, force_reset = False)
         pass
 
     def _on_training_end(self):
@@ -198,11 +198,7 @@ while model.num_timesteps < total_timesteps:
         plt.xlabel("Timesteps Trained")
         plt.ylabel("Total Reward per Episode")
         plt.savefig(curve_png)
-        # wandb.log({
-        #     "Timesteps Trained": x_time_steps[-1], 
-        #     "Total Reward per Episode": y_total_reward[-1]
-        #         })
-        #     
+        writer.add_scalar("Timesteps Trained/Total Reward Per Episode", x_time_steps[-1], y_total_reward[-1])
     model.get_env().reset()
     continue_training = model.collect_rollouts(model.env, callback, model.train_freq, replay_buffer = model.replay_buffer)
 
@@ -215,12 +211,15 @@ while model.num_timesteps < total_timesteps:
     print(f"Iteration {iteration} taken {time.time() - start_time} seconds")
     iteration += 1
 
+writer.flush()
+
 
 x_time_steps.append(model.num_timesteps)
 total_reward = evaluate_model(model)[0]
 y_total_reward.append(total_reward)
 print(f"Iteration {iteration} ({model.num_timesteps} timesteps): {total_reward}")
 render_model(model, file_name=task_name+"-s{:07d}-r{}".format(model.num_timesteps, total_reward))
-
 wrapped_env.close()
+writer.close()
+
 
