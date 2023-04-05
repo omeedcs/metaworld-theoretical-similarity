@@ -18,16 +18,9 @@ class MWSamplingEnvironment(gym.Wrapper):
        >>> env = TimeLimit(env, max_episode_steps=1000)
     """
 
-    def sample_env(env_constructor):
-
-        while True:
-            new_env = env_constructor(seed=random.randint(0, 10000))
-            new_env.reset()
-            yield MWSamplingEnvironment(new_env, 500)
-
     def __init__(
         self,
-        task_name: str = "default",
+        task_name: str
     ):
         """Initializes the :class:`TimeLimit` wrapper with an environment and the number of steps after which truncation will occur.
         Args:
@@ -36,14 +29,18 @@ class MWSamplingEnvironment(gym.Wrapper):
         """
         max_episode_steps = 500
         self.env_constructor = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f'{task_name}-goal-observable']
-        self.env_sampler = self.sample_env(self.env_constructor)
-        super().__init__(next(self.env_sampler))
+        super().__init__(self.sample_env())
         if max_episode_steps is None and self.env.spec is not None:
             max_episode_steps = self.env.spec.max_episode_steps
         if self.env.spec is not None:
             self.env.spec.max_episode_steps = max_episode_steps
         self._max_episode_steps = max_episode_steps
         self._elapsed_steps = None
+
+    def sample_env(self):
+        new_env = self.env_constructor(seed=random.randint(0, 10000))
+        new_env.reset()
+        return new_env
 
     def step(self, action):
         """Steps through the environment and if the number of steps elapsed exceeds ``max_episode_steps`` then truncate.
@@ -61,7 +58,7 @@ class MWSamplingEnvironment(gym.Wrapper):
 
         return observation, reward, done, info
 
-    def reset(self, **kwargs):
+    def reset(self, *args, seed=None, options=None):
         """Resets the environment with :param:`**kwargs` and sets the number of steps elapsed to zero.
         Args:
             **kwargs: The kwargs to reset the environment with
@@ -69,5 +66,5 @@ class MWSamplingEnvironment(gym.Wrapper):
             The reset environment
         """
         self._elapsed_steps = 0
-        self.env = next(self.env_sampler)
-        return self.env.reset(**kwargs)
+        self.env = self.sample_env()
+        return self.env.reset(*args)
