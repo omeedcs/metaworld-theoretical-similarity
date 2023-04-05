@@ -4,6 +4,8 @@ from typing import Optional
 import gym
 import random
 from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
+from gymnasium import spaces
+import numpy as np
 
 
 class MWSamplingEnvironment(gym.Wrapper):
@@ -29,6 +31,7 @@ class MWSamplingEnvironment(gym.Wrapper):
         """
         max_episode_steps = 500
         self.env_constructor = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[f'{task_name}-goal-observable']
+
         super().__init__(self.sample_env())
         if max_episode_steps is None and self.env.spec is not None:
             max_episode_steps = self.env.spec.max_episode_steps
@@ -40,7 +43,16 @@ class MWSamplingEnvironment(gym.Wrapper):
     def sample_env(self):
         new_env = self.env_constructor(seed=random.randint(0, 10000))
         new_env.reset()
+
         return new_env
+
+    @property
+    def observation_space(self):
+        return spaces.Box(low=self.env.observation_space.low, high=self.env.observation_space.high, dtype=self.env.observation_space.dtype)
+
+    @property
+    def action_space(self):
+        return spaces.Box(low=self.env.action_space.low, high=self.env.action_space.high, dtype=self.env.action_space.dtype)
 
     def step(self, action):
         """Steps through the environment and if the number of steps elapsed exceeds ``max_episode_steps`` then truncate.

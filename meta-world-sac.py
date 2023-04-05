@@ -6,6 +6,9 @@ from MWSamplingEnvironment import MWSamplingEnvironment
 
 def env_creator(env_config):
     env = EnvCompatibility(MWSamplingEnvironment("reach-v2"))
+
+    print(env.observation_space)
+    print(type(env.observation_space))
     return env
 
 register_env("mw_sampling_env", env_creator)
@@ -14,7 +17,7 @@ algo = (
     PPOConfig()
     .rollouts(num_rollout_workers=1)
     .resources(num_gpus=0)
-    .environment(env = "mw_sampling_env", disable_env_checking=True)
+    .environment(env = "mw_sampling_env")
     .build()
 )
 
