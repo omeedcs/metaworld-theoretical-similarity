@@ -6,19 +6,21 @@ from gymnasium.wrappers import EnvCompatibility
 from MWSamplingEnvironment import MWSamplingEnvironment
 import sys
 
+TASK_NAME = "bin-picking-v2"
+
 def env_creator(env_config):
-    env = EnvCompatibility(MWSamplingEnvironment("soccer-v2"))
+    env = EnvCompatibility(MWSamplingEnvironment(TASK_NAME))
 
     return env
 
-register_env("soccer-v2", env_creator)
+register_env(TASK_NAME, env_creator)
 
 algo = (
     SACConfig()
     .framework("torch")
     .rollouts(num_rollout_workers=4)
-    .resources(num_gpus=0)
-    .environment(env = "soccer-v2")
+    .resources(num_gpus=0, num_cpus_per_worker=1)
+    .environment(env = TASK_NAME)
     .build()
 )
 

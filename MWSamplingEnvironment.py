@@ -48,7 +48,7 @@ class MWSamplingEnvironment(gym.Wrapper):
 
     @property
     def observation_space(self):
-        return spaces.Box(low=self.env.observation_space.low, high=self.env.observation_space.high, dtype=self.env.observation_space.dtype)
+        return spaces.Box(low=np.repeat(-np.inf, 39), high=np.repeat(np.inf, 39), dtype=self.env.observation_space.dtype)
 
     @property
     def action_space(self):
