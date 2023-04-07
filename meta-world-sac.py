@@ -1,4 +1,3 @@
-from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms.sac import SACConfig
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
