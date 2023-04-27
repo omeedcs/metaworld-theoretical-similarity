@@ -66,6 +66,7 @@ class MWSamplingEnvironment(gym.Wrapper):
         self._elapsed_steps += 1
 
         if self._elapsed_steps >= self._max_episode_steps or info["success"] == True:
+            reward *= (self._max_episode_steps - self._elapsed_steps) * 0.5
             done = True
 
         return observation, reward, done, info
